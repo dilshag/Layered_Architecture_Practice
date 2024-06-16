@@ -25,6 +25,7 @@ public interface CustomerDAO {
 
         public String generateNewID() throws SQLException, ClassNotFoundException ;
 
+
         }
 
 

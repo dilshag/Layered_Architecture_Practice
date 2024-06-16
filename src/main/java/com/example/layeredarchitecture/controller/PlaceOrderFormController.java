@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -231,8 +232,7 @@ public class PlaceOrderFormController {
         return "OID-001";
     }
 
-    private void loadAllCustomerIds() {
-        try {
+    private void loadAllCustomerIds() throws SQLException, ClassNotFoundException {
            /* Connection connection = DBConnection.getDbConnection().getConnection();
             Statement stm = connection.createStatement();
             ResultSet rst = stm.executeQuery("SELECT * FROM Customer");
@@ -240,11 +240,10 @@ public class PlaceOrderFormController {
             while (rst.next()) {
                 cmbCustomerId.getItems().add(rst.getString("id"));
             }*/
-
-        } catch (SQLException e) {
-            new Alert(Alert.AlertType.ERROR, "Failed to load customer ids").show();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+        // CustomerDAO customerDAO = new CustomerDAOImpl();
+        ArrayList<CustomerDTO> customers = customerDAO.getAllCustomers();
+        for (CustomerDTO customerDTO : customers) {
+            cmbCustomerId.getItems().add(customerDTO.getId());
         }
     }
 
@@ -416,55 +415,32 @@ public class PlaceOrderFormController {
                 }
             }
 
-//                //Search & Update Item
-                ItemDTO item = findItem(detail.getItemCode());
-                item.setQtyOnHand(item.getQtyOnHand() - detail.getQty());
+//
 
-                PreparedStatement pstm = connection.prepareStatement("UPDATE Item SET description=?, unitPrice=?, qtyOnHand=? WHERE code=?");
-                pstm.setString(1, item.getDescription());
-                pstm.setBigDecimal(2, item.getUnitPrice());
-                pstm.setInt(3, item.getQtyOnHand());
-                pstm.setString(4, item.getCode());
 
-                if (!(pstm.executeUpdate() > 0)) {
-                    connection.rollback();
-                    connection.setAutoCommit(true);
-                    return false;
-                }
-            }
+        connection.commit();
+        connection.setAutoCommit(true);
+        return true;
 
-            connection.commit();
-            connection.setAutoCommit(true);
-            return true;
-
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+    } catch (SQLException throwables) {
+        throwables.printStackTrace();
+    } catch (ClassNotFoundException e) {
+        e.printStackTrace();
+    }
         return false;
+}
+
+
+public ItemDTO findItem(String code) throws SQLException, ClassNotFoundException {
+      /* Connection connection = DBConnection.getDbConnection().getConnection();
+          PreparedStatement pstm = connection.prepareStatement("SELECT * FROM Item WHERE code=?");
+          pstm.setString(1, code);
+          ResultSet rst = pstm.executeQuery();*/
+        //ItemDAO itemDAO = new ItemDAOImpl();
+        return itemDAO.findItem(code);
+        //    return new ItemDTO(code, rst.getString("description"), rst.getBigDecimal("unitPrice"), rst.getInt("qtyOnHand"));
     }
 
-
-    public ItemDTO findItem(String code) {
-       /* try {
-            Connection connection = DBConnection.getDbConnection().getConnection();
-            PreparedStatement pstm = connection.prepareStatement("SELECT * FROM Item WHERE code=?");
-            pstm.setString(1, code);
-            ResultSet rst = pstm.executeQuery();*/
-
-            // return new ItemDTO(code, rst.getString("description"), rst.getBigDecimal("unitPrice"), rst.getInt("qtyOnHand"));
-
-            //ItemDAOImpl itemDAO = new ItemDAOImpl();
-            ItemDAO itemDAO = new ItemDAOImpl();
-            return itemDAO.findItem(code);
-      /*  } catch (SQLException e) {
-            throw new RuntimeException("Failed to find the Item " + code, e);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;*/
-        }
-
+}
 
 
