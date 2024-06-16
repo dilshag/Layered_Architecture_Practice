@@ -348,26 +348,23 @@ public class PlaceOrderFormController {
         calculateTotal();
     }
 
-    public boolean saveOrder(String orderId, LocalDate orderDate, String customerId, List<OrderDetailDTO> orderDetails) throws SQLException, ClassNotFoundException {
+    public boolean saveOrder(String orderId, LocalDate orderDate, String customerId, List<OrderDetailDTO> orderDetails) {
         /*Transaction*/
-        Connection connection = null;
+                Connection connection = null;
         try {
-          /*  connection = DBConnection.getDbConnection().getConnection();
-            PreparedStatement stm = connection.prepareStatement("SELECT oid FROM `Orders` WHERE oid=?");
+           /* connection = DBConnection.getDbConnection().getConnection();
+            PreparedStatement stm = connection.prepareStatement("SELECT oid FROM Orders WHERE oid=?");
             stm.setString(1, orderId);
-           */ /*if order id already exist*//*
+            //*if order id already exist//*
             if (stm.executeQuery().next()) {
 
             }*/
-            //  OrderDAOImpl OrderDAO = new OrderDAOImpl();
-           // OrderDAO orderDAO= new OrderDAOImpl();
-            if (orderDAO.existOrderId(orderId)){
+            if (orderDAO.existOrderId(orderId)) {
 
             }
 
-
             connection.setAutoCommit(false);
-          /*  stm = connection.prepareStatement("INSERT INTO `Orders` (oid, date, customerID) VALUES (?,?,?)");
+           /*stm= connection.prepareStatement("INSERT INTO Orders (oid, date, customerID) VALUES (?,?,?)");
             stm.setString(1, orderId);
             stm.setDate(2, Date.valueOf(orderDate));
             stm.setString(3, customerId);
@@ -377,15 +374,12 @@ public class PlaceOrderFormController {
                 connection.setAutoCommit(true);
                 return false;
             }*/
-          //  OrderDAOImpl OrderDAO = new OrderDAOImpl();
-          //  OrderDAO orderDAO= new OrderDAOImpl();
-            if (orderDAO.saveOrder(orderId,orderDate,customerId) !=1){
+            if (orderDAO.saveOrder(orderId, orderDate, customerId) != 1) {
                 connection.rollback();
                 connection.setAutoCommit(true);
                 return false;
             }
-
-           /* stm = connection.prepareStatement("INSERT INTO OrderDetails (oid, itemCode, unitPrice, qty) VALUES (?,?,?,?)");
+          /*  stm = connection.prepareStatement("INSERT INTO OrderDetails (oid, itemCode, unitPrice, qty) VALUES (?,?,?,?)");
 
             for (OrderDetailDTO detail : orderDetails) {
                 stm.setString(1, orderId);
@@ -398,39 +392,48 @@ public class PlaceOrderFormController {
                     connection.setAutoCommit(true);
                     return false;
                 }*/
-            for (OrderDetailDTO orderDetail : orderDetails) {
-                String itemCode = orderDetail.getItemCode();
-                BigDecimal unitPrice = orderDetail.getUnitPrice();
-                int qty = orderDetail.getQty();
+            for (OrderDetailDTO detail : orderDetails) {
 
-               // OrderDetailsDAOImpl orderDetailsDAO = new OrderDetailsDAOImpl();
-              //  OrderDetailsDAO orderDetailsDAO =new OrderDetailsDAOImpl();
-                boolean added= orderDetailsDAO.addOrderDetail(orderId,new OrderDetailDTO(itemCode,qty,unitPrice));
-                System.out.println("add-" +added);
+                String itemCode = detail.getItemCode();
+                BigDecimal unitPrice = detail.getUnitPrice();
+                int qty =detail.getQty();
+                boolean added = orderDetailsDAO.addOrderDetail(orderId,new OrderDetailDTO(itemCode,qty,unitPrice));
+                System.out.println("add-"+added);
 
-                if (!added){
+
+                if (!added) {
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                    return false;
+                }
+                // Search & Update Item
+                ItemDTO item = (ItemDTO) findItem(detail.getItemCode());
+                item.setQtyOnHand(item.getQtyOnHand() - detail.getQty());
+
+                PreparedStatement pstm = connection.prepareStatement("UPDATE Item SET description=?, unitPrice=?, qtyOnHand=? WHERE code=?");
+                pstm.setString(1, item.getDescription());
+                pstm.setBigDecimal(2, item.getUnitPrice());
+                pstm.setInt(3, item.getQtyOnHand());
+                pstm.setString(4, item.getCode());
+
+                if (!(pstm.executeUpdate() > 0)) {
                     connection.rollback();
                     connection.setAutoCommit(true);
                     return false;
                 }
             }
 
-//
+            connection.commit();
+            connection.setAutoCommit(true);
+            return true;
 
-
-        connection.commit();
-        connection.setAutoCommit(true);
-        return true;
-
-    } catch (SQLException throwables) {
-        throwables.printStackTrace();
-    } catch (ClassNotFoundException e) {
-        e.printStackTrace();
-    }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
         return false;
-}
-
-
+    }
 public ItemDTO findItem(String code) throws SQLException, ClassNotFoundException {
       /* Connection connection = DBConnection.getDbConnection().getConnection();
           PreparedStatement pstm = connection.prepareStatement("SELECT * FROM Item WHERE code=?");
